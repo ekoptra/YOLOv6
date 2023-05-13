@@ -55,3 +55,13 @@ def write_tbimg(tblogger, imgs, step, type='train'):
             tblogger.add_image(f'val_img_{idx + 1}', img, step + 1, dataformats='HWC')
     else:
         LOGGER.warning('WARNING: Unknown image type to visualize.\n')
+
+def write_tbimg2(tblogger, imgs, imgs_name, step):
+    """Display evaluation plot to tensorboard."""
+
+    for img, name in zip(imgs, imgs_name):
+        try:
+            name = name.split('/')[-1].split('.')[0]
+            tblogger.add_image(name, img, step + 1, dataformats='HWC')
+        except:
+            LOGGER.warning(f'WARNING: failed to add {name} plot to tensorboard.\n')

@@ -26,7 +26,7 @@ from yolov6.models.losses.loss_fuseab import ComputeLoss as ComputeLoss_ab
 from yolov6.models.losses.loss_distill import ComputeLoss as ComputeLoss_distill
 from yolov6.models.losses.loss_distill_ns import ComputeLoss as ComputeLoss_distill_ns
 
-from yolov6.utils.events import LOGGER, NCOLS, load_yaml, write_tblog, write_tbimg
+from yolov6.utils.events import LOGGER, NCOLS, load_yaml, write_tblog, write_tbimg, write_tbimg2
 from yolov6.utils.ema import ModelEMA, de_parallel
 from yolov6.utils.checkpoint import load_state_dict, save_checkpoint, strip_optimizer
 from yolov6.solver.build import build_optimizer, build_lr_scheduler
@@ -110,6 +110,9 @@ class Trainer:
         if self.args.distill:
             self.loss_num += 1
             self.loss_info += ['cwd_loss']
+
+        self.vis_eval_name = []
+        self.vis_eval_list = []
 
 
     # Training Process
@@ -218,10 +221,12 @@ class Trainer:
             write_tblog(self.tblogger, self.epoch, self.evaluate_results, lrs_of_this_epoch, self.mean_loss)
             # save validation predictions to tensorboard
             write_tbimg(self.tblogger, self.vis_imgs_list, self.epoch, type='val')
+            # save valodation plot to tensorboard
+            write_tbimg2(self.tblogger, self.vis_eval_list, self.vis_eval_name, self.epoch)
 
     def eval_model(self):
         if not hasattr(self.cfg, "eval_params"):
-            results, vis_outputs, vis_paths = eval.run(self.data_dict,
+            results, vis_outputs, vis_paths, self.vis_eval_name = eval.run(self.data_dict,
                             batch_size=self.batch_size // self.world_size * 2,
                             img_size=self.img_size,
                             model=self.ema.ema if self.args.calib is False else self.model,
@@ -246,7 +251,7 @@ class Trainer:
                 else:
                     return default_value
             eval_img_size = get_cfg_value(self.cfg.eval_params, "img_size", self.img_size)
-            results, vis_outputs, vis_paths = eval.run(self.data_dict,
+            results, vis_outputs, vis_paths, self.vis_eval_name = eval.run(self.data_dict,
                             batch_size=get_cfg_value(self.cfg.eval_params, "batch_size", self.batch_size // self.world_size * 2),
                             img_size=eval_img_size,
                             model=self.ema.ema if self.args.calib is False else self.model,
@@ -270,6 +275,12 @@ class Trainer:
         self.evaluate_results = results
         # plot validation predictions
         self.plot_val_pred(vis_outputs, vis_paths)
+
+        # add plot evaluation on tensorboard
+        self.vis_eval_list = []
+        for plot in list_plot:
+            ori_img = cv2.imread(plot)
+            self.vis_eval_list.append(torch.from_numpy(ori_img[:, :, ::-1].copy()))
 
 
     def before_train_loop(self):

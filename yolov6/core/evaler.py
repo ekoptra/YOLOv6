@@ -192,12 +192,13 @@ class Evaler:
                 # Append statistics (correct, conf, pcls, tcls)
                 stats.append((correct.cpu(), pred[:, 4].cpu(), pred[:, 5].cpu(), tcls))
 
+        list_plot = []
         try:
             stats = [np.concatenate(x, 0) for x in zip(*stats)]  # to numpy
             if len(stats) and stats[0].any():
 
                 from yolov6.utils.metrics import ap_per_class
-                p, r, ap, f1, ap_class = ap_per_class(*stats, plot=self.plot_curve, save_dir=self.save_dir, names=model.names)
+                p, r, ap, f1, ap_class, list_plot = ap_per_class(*stats, plot=self.plot_curve, save_dir=self.save_dir, names=model.names)
                 AP50_F1_max_idx = len(f1.mean(0)) - f1.mean(0)[::-1].argmax() -1
                 LOGGER.info(f"IOU 50 best mF1 thershold near {AP50_F1_max_idx/1000.0}.")
                 ap50, ap = ap[:, 0], ap.mean(1)  # AP@0.5, AP@0.5:0.95
@@ -220,12 +221,13 @@ class Evaler:
 
                 
                 confusion_matrix.plot(save_dir=self.save_dir, names=list(model.names))
+                list_plot.append(Path(self.save_dir) / 'confusion_matrix.png')
         except:
             LOGGER.info("Calculate metric failed, might check dataset.")
                 
         self.pr_metric_result = (0.0, 0.0, 0.0, 0.0)
 
-        return pred_results, vis_outputs, vis_paths
+        return pred_results, vis_outputs, vis_paths, list_plot
 
 
     def eval_model(self, pred_results, model, dataloader, task):
