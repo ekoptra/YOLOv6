@@ -202,16 +202,16 @@ class Evaler:
                 AP50_F1_max_idx = len(f1.mean(0)) - f1.mean(0)[::-1].argmax() -1
                 LOGGER.info(f"IOU 50 best mF1 thershold near {AP50_F1_max_idx/1000.0}.")
                 ap50, ap = ap[:, 0], ap.mean(1)  # AP@0.5, AP@0.5:0.95
-                mp, mr, map50, map = p[:, AP50_F1_max_idx].mean(), r[:, AP50_F1_max_idx].mean(), ap50.mean(), ap.mean()
+                mp, mr, mf1, map50, map = p[:, AP50_F1_max_idx].mean(), r[:, AP50_F1_max_idx].mean(), f1[:, AP50_F1_max_idx].mean(), ap50.mean(), ap.mean()
                 nt = np.bincount(stats[3].astype(np.int64), minlength=model.nc)  # number of targets per class
 
                 # Print results
                 s = ('%-16s' + '%12s' * 7) % ('Class', 'Images', 'Labels', 'P@.5iou', 'R@.5iou', 'F1@.5iou', 'mAP@.5', 'mAP@.5:.95')
                 LOGGER.info(s)
                 pf = '%-16s' + '%12i' * 2 + '%12.3g' * 5  # print format
-                LOGGER.info(pf % ('all', seen, nt.sum(), mp, mr, f1.mean(0)[AP50_F1_max_idx], map50, map))
+                LOGGER.info(pf % ('all', seen, nt.sum(), mp, mr, mf1, map50, map))
 
-                self.pr_metric_result = (map50, map, mp, mr)
+                self.pr_metric_result = (map50, map, mp, mr, mf1)
 
                 # Print results per class
                 
@@ -224,8 +224,7 @@ class Evaler:
                 list_plot.append(Path(self.save_dir) / 'confusion_matrix.png')
         except:
             LOGGER.info("Calculate metric failed, might check dataset.")
-                
-        self.pr_metric_result = (0.0, 0.0, 0.0, 0.0)
+            self.pr_metric_result = (0.0, 0.0, 0.0, 0.0, 0.0)
 
         return pred_results, vis_outputs, vis_paths, list_plot
 

@@ -34,8 +34,9 @@ def write_tblog(tblogger, epoch, results, lrs, losses):
     """Display mAP and loss information to log."""
     tblogger.add_scalar("metrics/mAP@0.5", results[0], epoch + 1)
     tblogger.add_scalar("metrics/mAP@0.50:0.95", results[1], epoch + 1)
-    tblogger.add_scalar("metrics/precision", results[2], epoch + 1)
-    tblogger.add_scalar("metrics/recall", results[3], epoch + 1)
+    tblogger.add_scalar("metrics/P@.5iou", results[2], epoch + 1)
+    tblogger.add_scalar("metrics/R@.5iou", results[3], epoch + 1)
+    tblogger.add_scalar("metrics/F1@.5iou", results[4], epoch + 1)
 
     tblogger.add_scalar("train/iou_loss", losses[0], epoch + 1)
     tblogger.add_scalar("train/dist_focalloss", losses[1], epoch + 1)
