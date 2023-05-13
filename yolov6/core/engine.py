@@ -231,7 +231,10 @@ class Trainer:
                             task='train',
                             specific_shape=self.specific_shape,
                             height=self.height,
-                            width=self.width
+                            width=self.width,
+                            do_pr_metric=True,
+                            plot_curve=True,
+                            plot_confusion_matrix=True,
                             )
         else:
             def get_cfg_value(cfg_dict, value_str, default_value):
@@ -255,16 +258,16 @@ class Trainer:
                             infer_on_rect=get_cfg_value(self.cfg.eval_params, "infer_on_rect", False),
                             verbose=get_cfg_value(self.cfg.eval_params, "verbose", False),
                             do_coco_metric=get_cfg_value(self.cfg.eval_params, "do_coco_metric", True),
-                            do_pr_metric=get_cfg_value(self.cfg.eval_params, "do_pr_metric", False),
-                            plot_curve=get_cfg_value(self.cfg.eval_params, "plot_curve", False),
-                            plot_confusion_matrix=get_cfg_value(self.cfg.eval_params, "plot_confusion_matrix", False),
+                            do_pr_metric=True,
+                            plot_curve=True,
+                            plot_confusion_matrix=True,
                             specific_shape=self.specific_shape,
                             height=self.height,
                             width=self.width
                             )
 
-        LOGGER.info(f"Epoch: {self.epoch} | mAP@0.5: {results[0]} | mAP@0.50:0.95: {results[1]}")
-        self.evaluate_results = results[:2]
+        LOGGER.info(f"This is Epoch: {self.epoch} | mAP@0.5: {results[0]} | mAP@0.50:0.95: {results[1]}")
+        self.evaluate_results = results
         # plot validation predictions
         self.plot_val_pred(vis_outputs, vis_paths)
 

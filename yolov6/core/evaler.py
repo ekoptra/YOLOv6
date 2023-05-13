@@ -103,7 +103,7 @@ class Evaler:
         '''
         self.speed_result = torch.zeros(4, device=self.device)
         pred_results = []
-        pbar = tqdm(dataloader, desc=f"Inferencing model in {task} datasets.", ncols=NCOLS)
+        pbar = tqdm(dataloader, desc=f"Now, inferencing model in {task} datasets.", ncols=NCOLS)
 
         # whether to compute metric and plot PR curve and P、R、F1 curve under iou50 match rule
         if self.do_pr_metric:
@@ -192,8 +192,7 @@ class Evaler:
                 # Append statistics (correct, conf, pcls, tcls)
                 stats.append((correct.cpu(), pred[:, 4].cpu(), pred[:, 5].cpu(), tcls))
 
-        if self.do_pr_metric:
-            # Compute statistics
+        try:
             stats = [np.concatenate(x, 0) for x in zip(*stats)]  # to numpy
             if len(stats) and stats[0].any():
 
@@ -211,19 +210,20 @@ class Evaler:
                 pf = '%-16s' + '%12i' * 2 + '%12.3g' * 5  # print format
                 LOGGER.info(pf % ('all', seen, nt.sum(), mp, mr, f1.mean(0)[AP50_F1_max_idx], map50, map))
 
-                self.pr_metric_result = (map50, map)
+                self.pr_metric_result = (map50, map, mp, mr)
 
                 # Print results per class
-                if self.verbose and model.nc > 1:
-                    for i, c in enumerate(ap_class):
-                        LOGGER.info(pf % (model.names[c], seen, nt[c], p[i, AP50_F1_max_idx], r[i, AP50_F1_max_idx],
-                                           f1[i, AP50_F1_max_idx], ap50[i], ap[i]))
+                
+                for i, c in enumerate(ap_class):
+                    LOGGER.info(pf % (model.names[c], seen, nt[c], p[i, AP50_F1_max_idx], r[i, AP50_F1_max_idx],
+                                        f1[i, AP50_F1_max_idx], ap50[i], ap[i]))
 
-                if self.plot_confusion_matrix:
-                    confusion_matrix.plot(save_dir=self.save_dir, names=list(model.names))
-            else:
-                LOGGER.info("Calculate metric failed, might check dataset.")
-                self.pr_metric_result = (0.0, 0.0)
+                
+                confusion_matrix.plot(save_dir=self.save_dir, names=list(model.names))
+        except:
+            LOGGER.info("Calculate metric failed, might check dataset.")
+                
+        self.pr_metric_result = (0.0, 0.0, 0.0, 0.0)
 
         return pred_results, vis_outputs, vis_paths
 
@@ -237,8 +237,9 @@ class Evaler:
         LOGGER.info(f'\nEvaluating speed.')
         self.eval_speed(task)
 
-        if not self.do_coco_metric and self.do_pr_metric:
-            return self.pr_metric_result
+       
+        return self.pr_metric_result
+
         LOGGER.info(f'\nEvaluating mAP by pycocotools.')
         if task != 'speed' and len(pred_results):
             if 'anno_path' in self.data:
