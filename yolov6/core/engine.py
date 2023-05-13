@@ -278,7 +278,7 @@ class Trainer:
 
         # add plot evaluation on tensorboard
         self.vis_eval_list = []
-        for plot in list_plot:
+        for plot in self.vis_eval_name:
             ori_img = cv2.imread(plot)
             self.vis_eval_list.append(torch.from_numpy(ori_img[:, :, ::-1].copy()))
 
