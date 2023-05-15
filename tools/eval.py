@@ -81,6 +81,10 @@ def get_args_parser(add_help=True):
         args.iou_thres = 0.65
         args.task = "val"
         args.do_coco_metric = True
+    
+    args.do_pr_metric = True
+    args.plot_curve = True
+    args.plot_confusion_matrix = True
 
     LOGGER.info(args)
     return args
