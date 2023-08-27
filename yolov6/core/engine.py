@@ -154,8 +154,8 @@ class Trainer:
         with amp.autocast(enabled=self.device != 'cpu'):
             _, _, batch_height, batch_width = images.shape
             preds, s_featmaps = self.model(images)
-            print(preds)
             if self.args.distill:
+                print("masuk distilll")
                 with torch.no_grad():
                     t_preds, t_featmaps = self.teacher_model(images)
                 temperature = self.args.temperature
@@ -164,6 +164,7 @@ class Trainer:
                                                                   batch_height, batch_width)
 
             elif self.args.fuse_ab:
+                print("masuk fuse_ab")
                 total_loss, loss_items = self.compute_loss((preds[0],preds[3],preds[4]), targets, epoch_num,
                                                             step_num, batch_height, batch_width) # YOLOv6_af
                 total_loss_ab, loss_items_ab = self.compute_loss_ab(preds[:3], targets, epoch_num, step_num,
@@ -171,6 +172,7 @@ class Trainer:
                 total_loss += total_loss_ab
                 loss_items += loss_items_ab
             else:
+                print("masuk else")
                 total_loss, loss_items = self.compute_loss(preds, targets, epoch_num, step_num,
                                                             batch_height, batch_width) # YOLOv6_af
             if self.rank != -1:
