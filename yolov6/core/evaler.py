@@ -141,13 +141,6 @@ class Evaler:
             # post-process
             t3 = time_sync()
             
-            print("len outputs", len(outputs))
-            print(outputs)
-            total_loss, loss_items = self.compute_loss((outputs[0],outputs[3],outputs[4]), targets, self.epoch_num, 1,
-                                                            self.height, self.width)
-            
-            mean_loss = (mean_loss + loss_items) / 2
-            
             outputs = non_max_suppression(outputs, self.conf_thres, self.iou_thres, multi_label=True)
             self.speed_result[3] += time_sync() - t3  # post-process time
             self.speed_result[0] += len(outputs)
@@ -159,7 +152,17 @@ class Evaler:
                 eval_outputs = copy.deepcopy([x.detach().cpu() for x in outputs])
 
             # save result
-            pred_results.extend(self.convert_to_coco_format(outputs, imgs, paths, shapes, self.ids))
+            coco_format = self.convert_to_coco_format(outputs, imgs, paths, shapes, self.ids)
+            pred_results.extend(coco_format)
+            
+            print("coco format", len(coco_format))
+            print(coco_format)
+            print("len outputs", len(outputs))
+            print(outputs)
+            total_loss, loss_items = self.compute_loss((outputs[0],outputs[3],outputs[4]), targets, self.epoch_num, 1,
+                                                            self.height, self.width)
+            
+            mean_loss = (mean_loss + loss_items) / 2
 
             # for tensorboard visualization, maximum images to show: 8
             if i == 0:
