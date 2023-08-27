@@ -135,6 +135,7 @@ class Evaler:
 
             # Inference
             t2 = time_sync()
+            model.eval()
             outputs, _ = model(imgs)
             self.speed_result[2] += time_sync() - t2  # inference time
 
@@ -155,10 +156,11 @@ class Evaler:
             coco_format = self.convert_to_coco_format(outputs, imgs, paths, shapes, self.ids)
             pred_results.extend(coco_format)
             
-            print("coco format", len(coco_format))
-            print(coco_format)
-            print("len outputs", len(outputs))
-            print(outputs)
+            
+            model.train()
+            outputs2, _ = model(imgs)
+            print("len outputs", len(outputs2))
+            print(outputs2)
             total_loss, loss_items = self.compute_loss((outputs[0],outputs[3],outputs[4]), targets, self.epoch_num, 1,
                                                             self.height, self.width)
             
