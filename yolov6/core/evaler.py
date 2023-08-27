@@ -159,9 +159,7 @@ class Evaler:
             
             model.train()
             outputs2, _ = model(imgs)
-            print("len outputs", len(outputs2))
-            print(outputs2)
-            total_loss, loss_items = self.compute_loss((outputs[0],outputs[3],outputs[4]), targets, self.epoch_num, 1,
+            total_loss, loss_items = self.compute_loss(outputs2, targets, self.epoch_num, 1,
                                                             self.height, self.width)
             
             mean_loss = (mean_loss + loss_items) / 2
