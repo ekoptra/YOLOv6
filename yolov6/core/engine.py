@@ -172,7 +172,7 @@ class Trainer:
                 total_loss += total_loss_ab
                 loss_items += loss_items_ab
             else:
-                print("masuk else", preds.shape)
+                print("masuk else", len(preds))
                 total_loss, loss_items = self.compute_loss(preds, targets, epoch_num, step_num,
                                                             batch_height, batch_width) # YOLOv6_af
             if self.rank != -1:
