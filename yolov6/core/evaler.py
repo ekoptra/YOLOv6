@@ -17,6 +17,7 @@ from yolov6.utils.nms import non_max_suppression
 from yolov6.utils.general import download_ckpt
 from yolov6.utils.checkpoint import load_checkpoint
 from yolov6.utils.torch_utils import time_sync, get_model_info
+from yolov6.models.losses.loss import ComputeLoss as ComputeLoss
 
 
 class Evaler:
@@ -38,7 +39,9 @@ class Evaler:
                  plot_confusion_matrix=False,
                  specific_shape=False,
                  height=640,
-                 width=640
+                 width=640,
+                 config_train=None,
+                 epoch_num=None
                  ):
         assert do_pr_metric or do_coco_metric, 'ERROR: at least set one val metric'
         self.data = data
@@ -59,6 +62,9 @@ class Evaler:
         self.specific_shape = specific_shape
         self.height = height
         self.width = width
+        self.config_train = config_train
+        self.compute_loss = None
+        self.epoch_num = epoch_num
 
     def init_model(self, model, weights, task):
         if task != 'train':
@@ -104,6 +110,8 @@ class Evaler:
         self.speed_result = torch.zeros(4, device=self.device)
         pred_results = []
         pbar = tqdm(dataloader, desc=f"Now, inferencing model in {task} datasets.", ncols=NCOLS)
+        
+        self.compute_loss = ComputeLoss(**self.config_train)
 
         # whether to compute metric and plot PR curve and P、R、F1 curve under iou50 match rule
         if self.do_pr_metric:
@@ -115,6 +123,8 @@ class Evaler:
                 from yolov6.utils.metrics import ConfusionMatrix
                 confusion_matrix = ConfusionMatrix(nc=model.nc)
 
+        mean_loss = torch.zeros(3, device=self.device)
+        
         for i, (imgs, targets, paths, shapes) in enumerate(pbar):
             # pre-process
             t1 = time_sync()
@@ -130,9 +140,17 @@ class Evaler:
 
             # post-process
             t3 = time_sync()
+            
+            total_loss, loss_items = self.compute_loss(outputs, targets, self.epoch_num, 1,
+                                                            self.height, self.width)
+            
+            mean_loss = (mean_loss + loss_items) / 2
+            
             outputs = non_max_suppression(outputs, self.conf_thres, self.iou_thres, multi_label=True)
             self.speed_result[3] += time_sync() - t3  # post-process time
             self.speed_result[0] += len(outputs)
+            
+           
 
             if self.do_pr_metric:
                 import copy
@@ -226,7 +244,7 @@ class Evaler:
             LOGGER.info("Calculate metric failed, might check dataset.")
             self.pr_metric_result = (0.0, 0.0, 0.0, 0.0, 0.0)
 
-        return pred_results, vis_outputs, vis_paths, list_plot
+        return pred_results, vis_outputs, vis_paths, list_plot, mean_loss
 
 
     def eval_model(self, pred_results, model, dataloader, task):

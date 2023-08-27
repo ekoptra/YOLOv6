@@ -117,7 +117,9 @@ def run(data,
         config_file=None,
         specific_shape=False,
         height=640,
-        width=640
+        width=640,
+        config_train=None,
+        epoch_num=None
         ):
     """ Run the evaluation process
 
@@ -130,9 +132,7 @@ def run(data,
 
      # task
     Evaler.check_task(task)
-    if task == 'train':
-        save_dir = save_dir
-    else:
+    if task != 'train':
         save_dir = str(increment_name(osp.join(save_dir, name)))
         os.makedirs(save_dir, exist_ok=True)
 
@@ -153,7 +153,11 @@ def run(data,
                 shrink_size, infer_on_rect,
                 verbose, do_coco_metric, do_pr_metric,
                 plot_curve, plot_confusion_matrix,
-                specific_shape=specific_shape,height=height, width=width)
+                specific_shape=specific_shape,
+                height=height,
+                width=width,
+                config_train=config_train,
+                epoch_num=epoch_num)
     model = val.init_model(model, weights, task)
     dataloader = val.init_data(dataloader, task)
 

@@ -46,6 +46,12 @@ def write_tblog(tblogger, epoch, results, lrs, losses):
     tblogger.add_scalar("x/lr1", lrs[1], epoch + 1)
     tblogger.add_scalar("x/lr2", lrs[2], epoch + 1)
 
+  
+def write_tblog2(tblogger, epoch, losses):
+    tblogger.add_scalar("val/iou_loss", losses[0], epoch + 1)
+    tblogger.add_scalar("val/dist_focalloss", losses[1], epoch + 1)
+    tblogger.add_scalar("val/cls_loss", losses[2], epoch + 1)
+
 
 def write_tbimg(tblogger, imgs, step, type='train'):
     """Display train_batch and validation predictions to tensorboard."""
