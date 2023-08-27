@@ -246,7 +246,7 @@ class Trainer:
                             plot_confusion_matrix=True,
                             config_train=self.config_train,
                             epoch_num=self.epoch,
-                            device=self.device
+                            # device=self.device
                             )
         else:
             def get_cfg_value(cfg_dict, value_str, default_value):
@@ -266,7 +266,7 @@ class Trainer:
                             dataloader=self.val_loader,
                             save_dir=self.save_dir,
                             task='val',
-                            device=self.device,
+                            # device=self.device,
                             shrink_size=get_cfg_value(self.cfg.eval_params, "shrink_size", eval_img_size),
                             infer_on_rect=get_cfg_value(self.cfg.eval_params, "infer_on_rect", False),
                             verbose=get_cfg_value(self.cfg.eval_params, "verbose", False),
