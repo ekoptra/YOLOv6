@@ -141,6 +141,7 @@ class Evaler:
             # post-process
             t3 = time_sync()
             
+            print(outputs)
             total_loss, loss_items = self.compute_loss((outputs[0],outputs[3],outputs[4]), targets, self.epoch_num, 1,
                                                             self.height, self.width)
             

@@ -154,6 +154,7 @@ class Trainer:
         with amp.autocast(enabled=self.device != 'cpu'):
             _, _, batch_height, batch_width = images.shape
             preds, s_featmaps = self.model(images)
+            print(preds)
             if self.args.distill:
                 with torch.no_grad():
                     t_preds, t_featmaps = self.teacher_model(images)
