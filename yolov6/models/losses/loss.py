@@ -64,7 +64,7 @@ class ComputeLoss:
         assert pred_scores.type() == pred_distri.type()
         print(batch_height, batch_width)
         
-        gt_bboxes_scale = torch.tensor([batch_width, batch_height, batch_width, batch_height]).type_as(pred_scores)
+        gt_bboxes_scale = torch.tensor([batch_width, batch_height, batch_width, batch_height]).type_as(pred_scores).to(targets.device)
         batch_size = pred_scores.shape[0]
 
         # targets
@@ -181,7 +181,7 @@ class ComputeLoss:
         for i, item in enumerate(targets.cpu().numpy().tolist()):
             targets_list[int(item[0])].append(item[1:])
         max_len = max((len(l) for l in targets_list))
-        targets = torch.from_numpy(np.array(list(map(lambda l:l + [[-1,0,0,0,0]]*(max_len - len(l)), targets_list)))[:,1:,:])
+        targets = torch.from_numpy(np.array(list(map(lambda l:l + [[-1,0,0,0,0]]*(max_len - len(l)), targets_list)))[:,1:,:]).to(targets.device)
         batch_target = targets[:, :, 1:5].mul_(scale_tensor)
         targets[..., 1:] = xywh2xyxy(batch_target)
         return targets
