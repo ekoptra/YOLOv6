@@ -128,7 +128,6 @@ class Evaler:
         for i, (imgs, targets, paths, shapes) in enumerate(pbar):
             targets = targets.to(device=0)
             if mean_loss is None:
-                print("hallooo", targets.device)
                 mean_loss = torch.zeros(3, device=targets.device)
             
             # pre-process

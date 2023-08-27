@@ -164,9 +164,9 @@ def run(data,
     # eval
     model.cuda(device=0)
     model.eval()
-    pred_result, vis_outputs, vis_paths, list_plot = val.predict_model(model, dataloader, task)
+    pred_result, vis_outputs, vis_paths, list_plot, mean_loss = val.predict_model(model, dataloader, task)
     eval_result = val.eval_model(pred_result, model, dataloader, task)
-    return eval_result, vis_outputs, vis_paths, list_plot
+    return eval_result, vis_outputs, vis_paths, list_plot, mean_loss
 
 
 def main(args):
