@@ -212,9 +212,9 @@ class Evaler:
 
                     from yolov6.utils.metrics import process_batch
 
-                    correct = process_batch(predn, labelsn, iouv)
+                    correct = process_batch(predn.cpu(), labelsn.cpu(), iouv.cpu())
                     if self.plot_confusion_matrix:
-                        confusion_matrix.process_batch(predn, labelsn)
+                        confusion_matrix.process_batch(predn.cpu(), labelsn.cpu())
 
                 # Append statistics (correct, conf, pcls, tcls)
                 stats.append((correct.cpu(), pred[:, 4].cpu(), pred[:, 5].cpu(), tcls))
