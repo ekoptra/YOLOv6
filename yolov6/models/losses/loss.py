@@ -62,7 +62,9 @@ class ComputeLoss:
                generate_anchors(feats, self.fpn_strides, self.grid_cell_size, self.grid_cell_offset, device=feats[0].device)
 
         assert pred_scores.type() == pred_distri.type()
-        gt_bboxes_scale = torch.tensor([batch_width, batch_height, batch_width, batch_height]).type_as(pred_scores)
+    
+    
+        gt_bboxes_scale = torch.tensor([batch_width, batch_height, batch_width, batch_height]).type_as(pred_scores).to(targets.device)
         batch_size = pred_scores.shape[0]
 
         # targets

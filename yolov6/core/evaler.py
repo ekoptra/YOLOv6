@@ -17,6 +17,7 @@ from yolov6.utils.nms import non_max_suppression
 from yolov6.utils.general import download_ckpt
 from yolov6.utils.checkpoint import load_checkpoint
 from yolov6.utils.torch_utils import time_sync, get_model_info
+from yolov6.models.losses.loss import ComputeLoss as ComputeLoss
 
 
 class Evaler:
@@ -38,7 +39,9 @@ class Evaler:
                  plot_confusion_matrix=False,
                  specific_shape=False,
                  height=640,
-                 width=640
+                 width=640,
+                 config_train=None,
+                 epoch_num=None
                  ):
         assert do_pr_metric or do_coco_metric, 'ERROR: at least set one val metric'
         self.data = data
@@ -59,6 +62,9 @@ class Evaler:
         self.specific_shape = specific_shape
         self.height = height
         self.width = width
+        self.config_train = config_train
+        self.compute_loss = None
+        self.epoch_num = epoch_num
 
     def init_model(self, model, weights, task):
         if task != 'train':
@@ -104,6 +110,8 @@ class Evaler:
         self.speed_result = torch.zeros(4, device=self.device)
         pred_results = []
         pbar = tqdm(dataloader, desc=f"Now, inferencing model in {task} datasets.", ncols=NCOLS)
+        
+        self.compute_loss = ComputeLoss(**self.config_train)
 
         # whether to compute metric and plot PR curve and P、R、F1 curve under iou50 match rule
         if self.do_pr_metric:
@@ -115,7 +123,13 @@ class Evaler:
                 from yolov6.utils.metrics import ConfusionMatrix
                 confusion_matrix = ConfusionMatrix(nc=model.nc)
 
+        mean_loss = None
+        
         for i, (imgs, targets, paths, shapes) in enumerate(pbar):
+            targets = targets.to(device=0)
+            if mean_loss is None:
+                mean_loss = torch.zeros(3, device=targets.device)
+            
             # pre-process
             t1 = time_sync()
             imgs = imgs.to(self.device, non_blocking=True)
@@ -125,21 +139,33 @@ class Evaler:
 
             # Inference
             t2 = time_sync()
+            model.eval()
             outputs, _ = model(imgs)
             self.speed_result[2] += time_sync() - t2  # inference time
 
             # post-process
             t3 = time_sync()
+            
             outputs = non_max_suppression(outputs, self.conf_thres, self.iou_thres, multi_label=True)
             self.speed_result[3] += time_sync() - t3  # post-process time
             self.speed_result[0] += len(outputs)
+            
+           
 
             if self.do_pr_metric:
                 import copy
                 eval_outputs = copy.deepcopy([x.detach().cpu() for x in outputs])
 
             # save result
-            pred_results.extend(self.convert_to_coco_format(outputs, imgs, paths, shapes, self.ids))
+            coco_format = self.convert_to_coco_format(outputs, imgs, paths, shapes, self.ids)
+            pred_results.extend(coco_format)
+            
+            
+            model.train()
+            outputs2, _ = model(imgs)
+            total_loss, loss_items = self.compute_loss(outputs2, targets, self.epoch_num, 1, 416, 416)
+            
+            mean_loss = (mean_loss + loss_items) / 2
 
             # for tensorboard visualization, maximum images to show: 8
             if i == 0:
@@ -185,9 +211,9 @@ class Evaler:
 
                     from yolov6.utils.metrics import process_batch
 
-                    correct = process_batch(predn, labelsn, iouv)
+                    correct = process_batch(predn.cpu(), labelsn.cpu(), iouv.cpu())
                     if self.plot_confusion_matrix:
-                        confusion_matrix.process_batch(predn, labelsn)
+                        confusion_matrix.process_batch(predn.cpu(), labelsn.cpu())
 
                 # Append statistics (correct, conf, pcls, tcls)
                 stats.append((correct.cpu(), pred[:, 4].cpu(), pred[:, 5].cpu(), tcls))
@@ -226,7 +252,7 @@ class Evaler:
             LOGGER.info("Calculate metric failed, might check dataset.")
             self.pr_metric_result = (0.0, 0.0, 0.0, 0.0, 0.0)
 
-        return pred_results, vis_outputs, vis_paths, list_plot
+        return pred_results, vis_outputs, vis_paths, list_plot, mean_loss
 
 
     def eval_model(self, pred_results, model, dataloader, task):

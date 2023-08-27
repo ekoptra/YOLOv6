@@ -26,7 +26,7 @@ from yolov6.models.losses.loss_fuseab import ComputeLoss as ComputeLoss_ab
 from yolov6.models.losses.loss_distill import ComputeLoss as ComputeLoss_distill
 from yolov6.models.losses.loss_distill_ns import ComputeLoss as ComputeLoss_distill_ns
 
-from yolov6.utils.events import LOGGER, NCOLS, load_yaml, write_tblog, write_tbimg, write_tbimg2
+from yolov6.utils.events import LOGGER, NCOLS, load_yaml, write_tblog, write_tbimg, write_tbimg2, write_tblog2
 from yolov6.utils.ema import ModelEMA, de_parallel
 from yolov6.utils.checkpoint import load_state_dict, save_checkpoint, strip_optimizer
 from yolov6.solver.build import build_optimizer, build_lr_scheduler
@@ -37,6 +37,7 @@ from yolov6.utils.general import download_ckpt
 
 class Trainer:
     def __init__(self, args, cfg, device):
+        self.config_train = None
         self.args = args
         self.cfg = cfg
         self.device = device
@@ -219,14 +220,17 @@ class Trainer:
 
             # log for tensorboard
             write_tblog(self.tblogger, self.epoch, self.evaluate_results, lrs_of_this_epoch, self.mean_loss)
-            # save validation predictions to tensorboard
-            write_tbimg(self.tblogger, self.vis_imgs_list, self.epoch, type='val')
-            # save valodation plot to tensorboard
-            write_tbimg2(self.tblogger, self.vis_eval_list, self.vis_eval_name, self.epoch)
+            
+            if is_val_epoch:
+                write_tblog2(self.tblogger, self.epoch, self.val_mean_loss)
+                # save validation predictions to tensorboard
+                write_tbimg(self.tblogger, self.vis_imgs_list, self.epoch, type='val')
+                # save valodation plot to tensorboard
+                write_tbimg2(self.tblogger, self.vis_eval_list, self.vis_eval_name, self.epoch)
 
     def eval_model(self):
         if not hasattr(self.cfg, "eval_params"):
-            results, vis_outputs, vis_paths, self.vis_eval_name = eval.run(self.data_dict,
+            results, vis_outputs, vis_paths, self.vis_eval_name, self.val_mean_loss = eval.run(self.data_dict,
                             batch_size=self.batch_size // self.world_size * 2,
                             img_size=self.img_size,
                             model=self.ema.ema if self.args.calib is False else self.model,
@@ -240,6 +244,9 @@ class Trainer:
                             do_pr_metric=True,
                             plot_curve=True,
                             plot_confusion_matrix=True,
+                            config_train=self.config_train,
+                            epoch_num=self.epoch,
+                            # device=self.device
                             )
         else:
             def get_cfg_value(cfg_dict, value_str, default_value):
@@ -251,7 +258,7 @@ class Trainer:
                 else:
                     return default_value
             eval_img_size = get_cfg_value(self.cfg.eval_params, "img_size", self.img_size)
-            results, vis_outputs, vis_paths, self.vis_eval_name = eval.run(self.data_dict,
+            results, vis_outputs, vis_paths, self.vis_eval_name, self.val_mean_loss = eval.run(self.data_dict,
                             batch_size=get_cfg_value(self.cfg.eval_params, "batch_size", self.batch_size // self.world_size * 2),
                             img_size=eval_img_size,
                             model=self.ema.ema if self.args.calib is False else self.model,
@@ -259,6 +266,7 @@ class Trainer:
                             dataloader=self.val_loader,
                             save_dir=self.save_dir,
                             task='train',
+                            # device=self.device,
                             shrink_size=get_cfg_value(self.cfg.eval_params, "shrink_size", eval_img_size),
                             infer_on_rect=get_cfg_value(self.cfg.eval_params, "infer_on_rect", False),
                             verbose=get_cfg_value(self.cfg.eval_params, "verbose", False),
@@ -268,7 +276,9 @@ class Trainer:
                             plot_confusion_matrix=True,
                             specific_shape=self.specific_shape,
                             height=self.height,
-                            width=self.width
+                            width=self.width,
+                            config_train=self.config_train,
+                            epoch_num=self.epoch
                             )
 
         LOGGER.info(f"This is Epoch: {self.epoch} | mAP@0.5: {results[0]} | mAP@0.50:0.95: {results[1]}")
@@ -306,14 +316,16 @@ class Trainer:
             self.best_ap = self.evaluate_results[1]
             self.best_stop_strong_aug_ap = self.evaluate_results[1]
 
-
-        self.compute_loss = ComputeLoss(num_classes=self.data_dict['nc'],
-                                        ori_img_size=self.img_size,
-                                        warmup_epoch=self.cfg.model.head.atss_warmup_epoch,
-                                        use_dfl=self.cfg.model.head.use_dfl,
-                                        reg_max=self.cfg.model.head.reg_max,
-                                        iou_type=self.cfg.model.head.iou_type,
-					                    fpn_strides=self.cfg.model.head.strides)
+        self.config_train = {
+            "num_classes" : self.data_dict['nc'],
+            "ori_img_size": self.img_size,
+            "warmup_epoch": self.cfg.model.head.atss_warmup_epoch,
+            "use_dfl": self.cfg.model.head.use_dfl,
+            "reg_max": self.cfg.model.head.reg_max,
+            "iou_type": self.cfg.model.head.iou_type,
+            "fpn_strides": self.cfg.model.head.strides
+        }
+        self.compute_loss = ComputeLoss(**self.config_train)
 
         if self.args.fuse_ab:
             self.compute_loss_ab = ComputeLoss_ab(num_classes=self.data_dict['nc'],
