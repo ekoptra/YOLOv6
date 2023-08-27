@@ -123,7 +123,7 @@ class Evaler:
                 from yolov6.utils.metrics import ConfusionMatrix
                 confusion_matrix = ConfusionMatrix(nc=model.nc)
 
-        mean_loss = torch.zeros(3, device=self.device)
+        mean_loss = torch.zeros(3)
         
         for i, (imgs, targets, paths, shapes) in enumerate(pbar):
             # pre-process
