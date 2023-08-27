@@ -162,6 +162,7 @@ def run(data,
     dataloader = val.init_data(dataloader, task)
 
     # eval
+    model.cuda(device=0)
     model.eval()
     pred_result, vis_outputs, vis_paths, list_plot = val.predict_model(model, dataloader, task)
     eval_result = val.eval_model(pred_result, model, dataloader, task)
